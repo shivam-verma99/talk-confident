@@ -1,0 +1,61 @@
+[project]
+name = "talk-confident"
+version = "0.1.0"
+description = "Backend for Talk Confident — a spoken English coach for senior professionals, powered by Gemini 2.5 Flash."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.4",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "google-genai>=0.8.0",
+    "google-auth>=2.30",
+    "python-jose[cryptography]>=3.3",
+    "python-multipart>=0.0.9",
+    "tenacity>=8.5",
+    "structlog>=24.1",
+    "httpx>=0.27",
+    "anyio>=4.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "asgi-lifespan>=2.1",
+    "aiosqlite>=0.20",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]

@@ -1,0 +1,32 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+.idea/
+.vscode/
+.DS_Store
+
+# Audio is device-side only; if a dev ever creates one, never check it in.
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.ogg
+
+# Alembic shouldn't generate stray files but just in case.
+*.sqlite
+*.sqlite3

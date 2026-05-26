@@ -1,0 +1,85 @@
+"""Application configuration loaded from environment variables.
+
+A single ``Settings`` instance is reused everywhere via :func:`get_settings`.
+"""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Annotated
+
+from pydantic import AnyHttpUrl, Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Strongly typed settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # Core
+    app_env: str = "development"
+    app_name: str = "talk-confident"
+    log_level: str = "INFO"
+
+    # Database
+    database_url: str = Field(
+        default="postgresql+asyncpg://talkconfident:talkconfident@localhost:5432/talkconfident",
+    )
+
+    # Auth
+    jwt_secret: str = Field(default="change-me", min_length=8)
+    jwt_algorithm: str = "HS256"
+    jwt_expires_minutes: int = 60 * 24 * 30  # 30 days
+
+    google_oauth_client_id: str = Field(default="")
+    google_oauth_additional_audiences: str = ""
+
+    # Gemini
+    gemini_api_key: str = Field(default="")
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_cache_ttl_seconds: int = 3600
+
+    # Context budget
+    context_token_threshold: int = 80_000
+
+    # Uploads
+    max_audio_bytes: int = 50 * 1024 * 1024
+    inline_audio_threshold_bytes: int = 20 * 1024 * 1024
+
+    # CORS
+    cors_origins: str = ""
+
+    @field_validator("cors_origins")
+    @classmethod
+    def _normalise_cors(cls, v: str) -> str:
+        return v.strip()
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        if not self.cors_origins:
+            return []
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def google_audiences(self) -> list[str]:
+        """All Google client IDs we accept as ID-token audiences."""
+        audiences = [self.google_oauth_client_id] if self.google_oauth_client_id else []
+        extra = (self.google_oauth_additional_audiences or "").strip()
+        if extra:
+            audiences.extend(a.strip() for a in extra.split(",") if a.strip())
+        return audiences
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Return a cached ``Settings`` instance."""
+    return Settings()
+
+
+SettingsDep = Annotated[Settings, "Settings"]

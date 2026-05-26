@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: talkconfident-postgres
+    environment:
+      POSTGRES_USER: talkconfident
+      POSTGRES_PASSWORD: talkconfident
+      POSTGRES_DB: talkconfident
+    ports:
+      - "5432:5432"
+    volumes:
+      - talkconfident-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talkconfident -d talkconfident"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: talkconfident-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://talkconfident:talkconfident@postgres:5432/talkconfident
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  talkconfident-pg:
