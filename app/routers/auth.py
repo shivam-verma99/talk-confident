@@ -10,7 +10,12 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.db.models import Profile, User
 from app.deps import CurrentUser, DBSession
-from app.schemas.auth import GoogleLoginRequest, TokenResponse, UserOut
+from app.schemas.auth import (
+    GoogleLoginRequest,
+    TokenResponse,
+    UserOut,
+    UserUpdateRequest,
+)
 from app.security import (
     GoogleIdTokenError,
     create_access_token,
@@ -77,4 +82,24 @@ async def google_login(payload: GoogleLoginRequest, db: DBSession) -> TokenRespo
 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: CurrentUser) -> UserOut:
+    return UserOut.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    payload: UserUpdateRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> UserOut:
+    """Update mutable user fields. Currently: pronouns.
+
+    Uses ``model_fields_set`` so we can distinguish "field not sent" from
+    "field explicitly set to null/empty" — the latter clears the value.
+    """
+    if "pronouns" in payload.model_fields_set:
+        # Normalise empty string to null so we never store a meaningless ""
+        cleaned = (payload.pronouns or "").strip() or None
+        current_user.pronouns = cleaned
+    await db.commit()
+    await db.refresh(current_user)
     return UserOut.model_validate(current_user)

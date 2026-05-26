@@ -9,16 +9,19 @@ CURRICULUM_INSTRUCTION = """\
 Generate today's spoken-English practice plan tailored for this user.
 
 Requirements:
-- Pick 5 to 8 vocabulary words drawn from his persistent weaknesses and his daily \
-professional needs (status updates, escalations, vendor calls, root-cause briefings, \
-team deployments, maintenance reports). Avoid trivial or childish vocabulary. Avoid \
-words he has clearly mastered (mastery_score >= 0.85 in the supplied profile).
+- Pick 5 to 8 vocabulary words drawn from the user's persistent weaknesses and their \
+daily professional needs (status updates, escalations, vendor calls, root-cause \
+briefings, team deployments, maintenance reports). Avoid trivial or childish \
+vocabulary. Avoid words the user has clearly mastered (mastery_score >= 0.85 in the \
+supplied profile).
 - For each word: definition, one short example USED IN A BSNL CONTEXT, and a one-line \
 ``why_chosen`` rationale tying it to a weakness or professional need.
 - Compose 6 to 10 practice sentences using the selected words in realistic BSNL \
 maintenance contexts (fiber cut, downtime, OFC restoration, vendor escalation, team \
 deployment, status review). Vary sentence length and complexity within the user's \
 current level. Each sentence should specify ``target_words`` and a 1-10 ``difficulty``.
+- Never assume gender. Do not use "sir", "madam", or gendered pronouns. Refer to the \
+user as "you" and to third parties by their role.
 - ``focus_areas`` is a short list (max 4) of the gaps these sentences exercise.
 - ``meeting_scenario_seed`` is OPTIONAL. Include it only if today is a good day for \
 spontaneous practice (e.g., variety hasn't been seen in several days, or the user \
@@ -96,7 +99,10 @@ Output a single scenario, fully self-contained, with: a short title; concrete co
 (2-4 sentences with specifics — exchange names, routes, durations, vendors are welcome); \
 the user's role; the counterpart's role; 3-5 objectives the user must achieve in the \
 conversation; an opening prompt the counterpart will say first to start the role-play; \
-and 3-6 short ``suggested_phrases`` he can lean on when he gets stuck.
+and 3-6 short ``suggested_phrases`` they can lean on when they get stuck.
+
+Do not assume gender — no "sir", "madam", or gendered pronouns. Refer to the user as \
+"you" or by role; refer to the counterpart by their professional role.
 
 Do not emit text outside the JSON schema.
 """

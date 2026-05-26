@@ -62,6 +62,28 @@ class QualityBand(str, enum.Enum):
     neutral = "neutral"
 
 
+class WordSource(str, enum.Enum):
+    """Who put a word into the user's active list."""
+
+    coach = "coach"  # added by the AI based on attempt analysis
+    user = "user"  # added by the learner themselves
+
+
+class WordStatus(str, enum.Enum):
+    """Lifecycle bucket for a word list entry."""
+
+    active = "active"  # currently being practiced
+    archived = "archived"  # mastered / denied / removed; read-only view
+
+
+class ArchiveReason(str, enum.Enum):
+    """Why a word left the active list."""
+
+    mastered = "mastered"  # auto: mastery threshold reached
+    denied = "denied"  # user declined a coach suggestion
+    removed = "removed"  # user removed their own word
+
+
 # --------------------------------------------------------------------------- models
 
 
@@ -74,6 +96,10 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     picture_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     role: Mapped[str] = mapped_column(String(64), default="engineer", server_default="engineer")
+    # Free-form pronoun phrase ("she/her", "he/him", "they/them", or custom). Nullable —
+    # we never assume gender; if unset the system speaks neutrally and avoids any
+    # third-person pronoun. The on-device Settings screen lets the user pick or clear it.
+    pronouns: Mapped[str | None] = mapped_column(String(64), nullable=True)
     native_languages: Mapped[list[str]] = mapped_column(
         _json_col(), default=lambda: ["hi", "mwr"]
     )
@@ -89,6 +115,9 @@ class User(Base):
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
     vocab_words: Mapped[list["VocabWord"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    word_list_entries: Mapped[list["WordListEntry"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
     sessions: Mapped[list["PracticeSession"]] = relationship(
@@ -243,3 +272,71 @@ class ContextSummary(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="summaries")
+
+
+class WordListEntry(Base):
+    """A single curated word the user is learning to pronounce / use.
+
+    The active list is the user's working set; archived is read-only history. Together
+    they support a soft spaced-repetition curriculum:
+
+    * ``mastery_score`` is a rolling EMA (0-100) of pronunciation+fluency on attempts
+      whose ``target_text`` contained this word. Once ``>= 85`` over ``>= 5`` attempts
+      the entry auto-archives with reason ``mastered``.
+    * ``priority`` orders the active list (higher first). Coach picks default to 50;
+      user-added picks default to 80 so personal goals surface near the top.
+    * ``target_weakness`` records the phoneme / lexical / grammatical pattern that the
+      coach intends this word to drill — surfaced verbatim in the UI under ``why_chosen``.
+
+    Constraints:
+    * (user_id, word) is unique across both active and archived — we never duplicate a
+      word for a user. Re-suggesting a denied word is therefore blocked at insert time.
+    """
+
+    __tablename__ = "word_list_entries"
+    __table_args__ = (
+        UniqueConstraint("user_id", "word", name="uq_word_list_entries_user_word"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+
+    word: Mapped[str] = mapped_column(String(128), index=True)
+    definition: Mapped[str] = mapped_column(Text)
+    example: Mapped[str | None] = mapped_column(Text, nullable=True)
+    why_chosen: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_weakness: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    source: Mapped[WordSource] = mapped_column(
+        SAEnum(WordSource, name="word_source"),
+        default=WordSource.coach,
+        server_default=WordSource.coach.value,
+        index=True,
+    )
+    status: Mapped[WordStatus] = mapped_column(
+        SAEnum(WordStatus, name="word_status"),
+        default=WordStatus.active,
+        server_default=WordStatus.active.value,
+        index=True,
+    )
+    archive_reason: Mapped[ArchiveReason | None] = mapped_column(
+        SAEnum(ArchiveReason, name="archive_reason"), nullable=True
+    )
+
+    priority: Mapped[float] = mapped_column(Float, default=50.0, server_default="50.0")
+    attempts_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    mastery_score: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+
+    last_practiced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    user: Mapped[User] = relationship(back_populates="word_list_entries")

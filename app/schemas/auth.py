@@ -22,10 +22,28 @@ class UserOut(BaseModel):
     full_name: str | None
     picture_url: str | None
     role: str
+    pronouns: str | None
     native_languages: list[str]
     preferred_analogy_domains: list[str]
     created_at: datetime
     last_login_at: datetime | None
+
+
+class UserUpdateRequest(BaseModel):
+    """Patch payload for ``PATCH /auth/me`` — only mutable user-facing fields.
+
+    All fields are optional; omitted fields are left unchanged. ``pronouns`` may
+    be set to ``null`` (explicit JSON ``null``) to clear a previously chosen value.
+    """
+
+    pronouns: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "Free-form pronoun phrase ('she/her', 'he/him', 'they/them', or "
+            "custom). Pass an empty string or null to clear."
+        ),
+    )
 
 
 class TokenResponse(BaseModel):

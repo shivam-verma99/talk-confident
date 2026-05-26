@@ -59,6 +59,10 @@ from app.services.progress_service import (
     classify_quality_band,
     evaluation_to_score_dict,
 )
+from app.services.wordlist_service import (
+    analyze_attempt_for_word_recommendations,
+    apply_attempt_to_existing_words,
+)
 
 router = APIRouter(prefix="/practice", tags=["practice"])
 
@@ -79,6 +83,45 @@ async def _read_upload(upload: UploadFile) -> tuple[bytes, str]:
         )
     mime = validate_audio_upload(mime_type=upload.content_type, size_bytes=len(buffer))
     return buffer, mime
+
+
+async def _schedule_wordlist_analysis(
+    *,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    user_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+) -> None:
+    """Queue a Gemini call that may add new coach words after this attempt.
+
+    The mastery updates for *already-active* words already happened inline
+    (cheap DB-only). This task is the slow one — it consults Gemini to look
+    for new patterns worth adding.
+    """
+    genai_client = request.app.state.genai_client
+
+    async def _run() -> None:
+        async with session_scope() as session:
+            user = (
+                await session.execute(select(User).where(User.id == user_id))
+            ).scalar_one()
+            profile = (
+                await session.execute(select(Profile).where(Profile.user_id == user_id))
+            ).scalar_one()
+            attempt = (
+                await session.execute(
+                    select(PracticeAttempt).where(PracticeAttempt.id == attempt_id)
+                )
+            ).scalar_one()
+            await analyze_attempt_for_word_recommendations(
+                client=genai_client,
+                db=session,
+                user=user,
+                profile=profile,
+                attempt=attempt,
+            )
+
+    background_tasks.add_task(_run)
 
 
 async def _maybe_schedule_summarization(
@@ -215,14 +258,28 @@ async def evaluate_practice(
     await db.flush()
 
     await apply_evaluation_to_profile(db=db, profile=profile, user_id=current_user.id)
+    # Inline: bump mastery + auto-archive any active words that appeared in target_text.
+    await apply_attempt_to_existing_words(
+        db=db, user_id=current_user.id, attempt=attempt
+    )
     await _maybe_schedule_summarization(
         request=request,
         background_tasks=background_tasks,
         profile=profile,
         new_tokens=outcome.tokens_used,
     )
+    attempt_id = attempt.id
     await db.commit()
     await db.refresh(attempt)
+
+    # Background: ask Gemini whether this attempt reveals patterns worth adding
+    # as new coach words. Runs after the HTTP response is sent.
+    await _schedule_wordlist_analysis(
+        request=request,
+        background_tasks=background_tasks,
+        user_id=current_user.id,
+        attempt_id=attempt_id,
+    )
 
     return EvaluationResponse(
         attempt_id=attempt.id,
@@ -377,14 +434,25 @@ async def submit_meeting_prep_turn(
     await db.flush()
 
     await apply_evaluation_to_profile(db=db, profile=profile, user_id=current_user.id)
+    await apply_attempt_to_existing_words(
+        db=db, user_id=current_user.id, attempt=attempt
+    )
     await _maybe_schedule_summarization(
         request=request,
         background_tasks=background_tasks,
         profile=profile,
         new_tokens=outcome.tokens_used,
     )
+    attempt_id = attempt.id
     await db.commit()
     await db.refresh(attempt)
+
+    await _schedule_wordlist_analysis(
+        request=request,
+        background_tasks=background_tasks,
+        user_id=current_user.id,
+        attempt_id=attempt_id,
+    )
 
     return MeetingPrepTurnResponse(
         attempt_id=attempt.id,
