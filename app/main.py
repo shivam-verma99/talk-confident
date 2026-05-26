@@ -16,6 +16,7 @@ from app.routers import auth, curriculum, practice, progress
 from app.security import AuthError, GoogleIdTokenError
 from app.services.ai_service import AIRateLimitError, AIServiceError
 from app.services.audio_service import AudioPreparationError, AudioValidationError
+from app.services.keepalive import start_keepalive, stop_keepalive
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +36,11 @@ async def lifespan(app: FastAPI):
         logger.warning("GEMINI_API_KEY is empty — Gemini calls will fail until it is set.")
     app.state.genai_client = genai.Client(api_key=settings.gemini_api_key)
     logger.info("App %s starting (env=%s)", settings.app_name, settings.app_env)
+    app.state.keepalive_task = start_keepalive(settings)
     try:
         yield
     finally:
+        await stop_keepalive(app.state.keepalive_task)
         await dispose_engine()
         logger.info("App %s stopped", settings.app_name)
 

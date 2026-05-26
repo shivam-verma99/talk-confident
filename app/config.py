@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     max_audio_bytes: int = 50 * 1024 * 1024
     inline_audio_threshold_bytes: int = 20 * 1024 * 1024
 
+    # Self-poll keepalive — keeps Render's free-tier instance from spinning
+    # down. ``self_ping_url`` may be left empty; the loop then falls back to
+    # ``RENDER_EXTERNAL_URL`` (Render injects this automatically). If neither
+    # is set, the keepalive task is skipped entirely.
+    self_ping_url: str = ""
+    self_ping_interval_seconds: int = 600  # 10 minutes
+    self_ping_path: str = "/healthz"
+
     # CORS
     cors_origins: str = ""
 
