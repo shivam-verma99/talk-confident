@@ -21,14 +21,35 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    practice_mode = sa.Enum(
+    # Create the enum types up front, then reference them in tables with
+    # ``create_type=False`` so SQLAlchemy does not try to CREATE TYPE again
+    # on each ``create_table`` call (asyncpg raises DuplicateObjectError).
+    practice_mode = postgresql.ENUM(
         "read_aloud", "spontaneous", "meeting_prep", name="practice_mode"
     )
-    vocab_source = sa.Enum("daily", "weakness", "meeting", name="vocab_source")
-    quality_band = sa.Enum("best", "worst", "neutral", name="quality_band")
+    vocab_source = postgresql.ENUM(
+        "daily", "weakness", "meeting", name="vocab_source"
+    )
+    quality_band = postgresql.ENUM(
+        "best", "worst", "neutral", name="quality_band"
+    )
     practice_mode.create(op.get_bind(), checkfirst=True)
     vocab_source.create(op.get_bind(), checkfirst=True)
     quality_band.create(op.get_bind(), checkfirst=True)
+
+    # Re-bind as non-creating references for column usage below.
+    practice_mode = postgresql.ENUM(
+        "read_aloud", "spontaneous", "meeting_prep",
+        name="practice_mode", create_type=False,
+    )
+    vocab_source = postgresql.ENUM(
+        "daily", "weakness", "meeting",
+        name="vocab_source", create_type=False,
+    )
+    quality_band = postgresql.ENUM(
+        "best", "worst", "neutral",
+        name="quality_band", create_type=False,
+    )
 
     op.create_table(
         "users",
