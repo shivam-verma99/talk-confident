@@ -1,7 +1,7 @@
 [project]
 name = "talk-confident"
 version = "0.1.0"
-description = "Backend for Talk Confident — a spoken English coach for senior professionals, powered by Gemini 2.5 Flash."
+description = "Backend for Talk Confident — a spoken English coach for senior professionals, powered by Gemini 3.1 Flash-Lite."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,7 +13,8 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.30",
     "asyncpg>=0.29",
     "alembic>=1.13",
-    "google-genai>=0.8.0",
+    # 1.51+ ships ThinkingConfig.thinking_level support for Gemini 3 models.
+    "google-genai>=1.51.0",
     "google-auth>=2.30",
     "python-jose[cryptography]>=3.3",
     "python-multipart>=0.0.9",

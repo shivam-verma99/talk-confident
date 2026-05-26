@@ -57,7 +57,15 @@ class Settings(BaseSettings):
 
     # Gemini
     gemini_api_key: str = Field(default="")
-    gemini_model: str = "gemini-2.5-flash"
+    # Default to Gemini 3.1 Flash-Lite — the cheapest Gemini 3 tier that still
+    # ships with native audio understanding, structured output, and context
+    # caching. See https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite
+    gemini_model: str = "gemini-3.1-flash-lite"
+    # Gemini 3 replaced ``thinking_budget`` with ``thinking_level``. Allowed
+    # values: ``minimal`` | ``low`` | ``medium`` | ``high``. We default to
+    # ``high`` for the deepest reasoning on every call.
+    # https://ai.google.dev/gemini-api/docs/gemini-3
+    gemini_thinking_level: str = "high"
     gemini_cache_ttl_seconds: int = 3600
 
     # Context budget

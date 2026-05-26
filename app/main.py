@@ -12,7 +12,7 @@ from google import genai
 
 from app.config import get_settings
 from app.db.base import dispose_engine
-from app.routers import auth, curriculum, practice, progress
+from app.routers import auth, curriculum, practice, progress, wordlist
 from app.security import AuthError, GoogleIdTokenError
 from app.services.ai_service import AIRateLimitError, AIServiceError
 from app.services.audio_service import AudioPreparationError, AudioValidationError
@@ -52,7 +52,8 @@ def create_app() -> FastAPI:
         title="Talk Confident",
         description=(
             "Backend for a spoken-English coach designed for senior professionals. "
-            "Powered by Gemini 2.5 Flash native audio. Audio bytes stay on the device."
+            "Powered by Gemini 3.1 Flash-Lite native audio with high-level thinking. "
+            "Audio bytes stay on the device."
         ),
         version="0.1.0",
         lifespan=lifespan,
@@ -72,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(curriculum.router)
     app.include_router(practice.router)
     app.include_router(progress.router)
+    app.include_router(wordlist.router)
 
     @app.get("/healthz", tags=["health"])
     async def health() -> dict[str, str]:

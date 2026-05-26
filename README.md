@@ -1,9 +1,10 @@
 # Talk Confident — Backend
 
 A FastAPI backend that powers an Android app helping senior professionals build confident
-spoken English. It uses **Gemini 2.5 Flash** for native audio understanding (no separate
-STT), a respectful executive-coach persona, and a context-budget manager that keeps
-long-term usage affordable via summarization + Gemini's Explicit Context Caching.
+spoken English. It uses **Gemini 3.1 Flash-Lite** for native audio understanding (no
+separate STT), with `thinking_level=high` for deep reasoning on every call, a respectful
+executive-coach persona, and a context-budget manager that keeps long-term usage
+affordable via summarization + Gemini's Explicit Context Caching.
 
 ## Highlights
 

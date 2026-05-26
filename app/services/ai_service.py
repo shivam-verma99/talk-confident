@@ -116,6 +116,12 @@ async def _generate_json(
     config_kwargs: dict[str, Any] = {
         "response_mime_type": "application/json",
         "response_schema": response_schema,
+        # Gemini 3 reasoning knob. ``high`` = deepest internal reasoning. The SDK
+        # handles thought signatures automatically across multi-turn calls.
+        # https://ai.google.dev/gemini-api/docs/gemini-3#thinking
+        "thinking_config": types.ThinkingConfig(
+            thinking_level=settings.gemini_thinking_level,
+        ),
     }
 
     if cache_handle and cache_handle.is_cached:

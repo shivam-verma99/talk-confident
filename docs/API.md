@@ -2,7 +2,7 @@
 
 > **Audience:** Android (Kotlin/Compose) and any other client that talks to the
 > Talk Confident backend.
-> **Backend:** FastAPI + PostgreSQL + Gemini 2.5 Flash. Audio bytes stay on the
+> **Backend:** FastAPI + PostgreSQL + Gemini 3.1 Flash-Lite. Audio bytes stay on the
 > device — see [Audio handling](#audio-handling).
 
 - [1. Conventions](#1-conventions)
