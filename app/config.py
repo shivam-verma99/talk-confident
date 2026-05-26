@@ -32,6 +32,21 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://talkconfident:talkconfident@localhost:5432/talkconfident",
     )
 
+    @field_validator("database_url")
+    @classmethod
+    def _normalise_database_url(cls, v: str) -> str:
+        """Coerce Render/Heroku-style URLs to the async SQLAlchemy dialect.
+
+        Managed hosts (Render, Heroku, Fly, etc.) hand out URLs like
+        ``postgres://user:pass@host/db``. SQLAlchemy 2.x rejects the bare
+        ``postgres`` scheme, and we always want the asyncpg driver here.
+        """
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        if v.startswith("postgresql://") and "+asyncpg" not in v:
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+
     # Auth
     jwt_secret: str = Field(default="change-me", min_length=8)
     jwt_algorithm: str = "HS256"
